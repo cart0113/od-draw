@@ -43,6 +43,9 @@ docs/_build/
 /*.png
 /*.drawio
 
+# Example outputs
+examples/output/
+
 # IDE
 .vscode/
 *.code-workspace

@@ -7,9 +7,11 @@ This file provides guidance to AI assistants when working with code in this repo
 **THIS IS THE MOST IMPORTANT INSTRUCTION - FAILURE TO FOLLOW WILL CAUSE ERRORS:**
 
 - **ALWAYS USE `python-main`** - NEVER use `python` or `python3`
+- **ALWAYS USE `uv-main`** - NEVER use `pip` or `uv`
 - **ALWAYS USE `ruff-main`** - NEVER use `ruff`
 - These are custom executables that must be used for ALL Python operations
 - No exceptions to this rule - `python-main` is the ONLY Python interpreter to use
+- For package installation, use `uv-main pip install` instead of `pip install`
 - For formatting, use `ruff-main` directly or `/Users/ajcarter/bin/run-ruff.sh` (which uses ruff-main)
 
 ## Important Workspace Management
@@ -201,7 +203,7 @@ The project is organized into focused modules:
 
 ```bash
 # Install for development
-pip install -e ".[dev,docs]"
+uv-main pip install -e ".[dev,docs]"
 ```
 
 ### Running Examples

@@ -32,6 +32,9 @@ docs = [
     "furo >= 2023.0.0",
 ]
 
+[project.scripts]
+od-draw = "od_draw.cli:cli"
+
 [project.urls]
 Homepage = "https://github.com/ajcarter/od-draw"
 Issues = "https://github.com/ajcarter/od-draw/issues"
