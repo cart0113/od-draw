@@ -9,9 +9,76 @@ from ...shapes.base import Shape, Rectangle, Circle, Triangle, Polygon, Line, Sq
 
 
 class SVGBackend(Backend):
+    def _calculate_bounding_box(self, shapes: List[Shape]) -> tuple:
+        """Calculate the bounding box of all shapes, accounting for rotation."""
+        if not shapes:
+            return 0, 0, 800, 600
+
+        min_x = float("inf")
+        min_y = float("inf")
+        max_x = float("-inf")
+        max_y = float("-inf")
+
+        for shape in shapes:
+            if isinstance(shape, Line):
+                min_x = min(min_x, shape.x0, shape.x1)
+                min_y = min(min_y, shape.y0, shape.y1)
+                max_x = max(max_x, shape.x0, shape.x1)
+                max_y = max(max_y, shape.y0, shape.y1)
+            elif isinstance(shape, Polygon):
+                # Polygons with rotation need special handling
+                if shape.rotation != 0:
+                    # Calculate centroid for rotation
+                    cx = sum(x for x, y in shape.points) / len(shape.points)
+                    cy = sum(y for x, y in shape.points) / len(shape.points)
+                    # Rotate each point
+                    angle_rad = math.radians(shape.rotation)
+                    for x, y in shape.points:
+                        rx = cx + (x - cx) * math.cos(angle_rad) - (y - cy) * math.sin(angle_rad)
+                        ry = cy + (x - cx) * math.sin(angle_rad) + (y - cy) * math.cos(angle_rad)
+                        min_x = min(min_x, rx)
+                        min_y = min(min_y, ry)
+                        max_x = max(max_x, rx)
+                        max_y = max(max_y, ry)
+                else:
+                    for x, y in shape.points:
+                        min_x = min(min_x, x)
+                        min_y = min(min_y, y)
+                        max_x = max(max_x, x)
+                        max_y = max(max_y, y)
+            else:
+                # Rectangle-like shapes with rotation
+                if shape.rotation != 0:
+                    # Calculate the four corners
+                    cx = shape.x + shape.width / 2
+                    cy = shape.y + shape.height / 2
+                    angle_rad = math.radians(shape.rotation)
+
+                    corners = [
+                        (shape.x, shape.y),
+                        (shape.x + shape.width, shape.y),
+                        (shape.x + shape.width, shape.y + shape.height),
+                        (shape.x, shape.y + shape.height),
+                    ]
+
+                    for x, y in corners:
+                        rx = cx + (x - cx) * math.cos(angle_rad) - (y - cy) * math.sin(angle_rad)
+                        ry = cy + (x - cx) * math.sin(angle_rad) + (y - cy) * math.cos(angle_rad)
+                        min_x = min(min_x, rx)
+                        min_y = min(min_y, ry)
+                        max_x = max(max_x, rx)
+                        max_y = max(max_y, ry)
+                else:
+                    min_x = min(min_x, shape.x)
+                    min_y = min(min_y, shape.y)
+                    max_x = max(max_x, shape.x + shape.width)
+                    max_y = max(max_y, shape.y + shape.height)
+
+        return min_x, min_y, max_x, max_y
+
     def render(self, shapes: List[Shape], output_path: str, **kwargs):
-        width = kwargs.get("width", 800)
-        height = kwargs.get("height", 600)
+        explicit_dimensions = kwargs.get("explicit_dimensions", False)
+
         show_rulers = kwargs.get("show_rulers", False)
         show_grid = kwargs.get("show_grid", False)
         margin = kwargs.get("margin", 0)
@@ -20,24 +87,60 @@ class SVGBackend(Backend):
         margin_left = kwargs.get("margin_left", margin)
         margin_right = kwargs.get("margin_right", margin)
 
+        # Add space for rulers if requested
+        ruler_size = 30 if show_rulers else 0
+        ruler_left = ruler_size
+        ruler_top = ruler_size
+
+        if explicit_dimensions:
+            # Use explicitly set dimensions (already includes any desired margins)
+            content_width = kwargs.get("width", 800)
+            content_height = kwargs.get("height", 600)
+            min_x = 0
+            min_y = 0
+            max_x = content_width
+            max_y = content_height
+        else:
+            # Auto-calculate from bounding box
+            min_x, min_y, max_x, max_y = self._calculate_bounding_box(shapes)
+            # The content area is the shape bounds PLUS margins on all sides
+            # Margins are PART OF the drawing
+            content_width = (max_x - min_x) + margin_left + margin_right
+            content_height = (max_y - min_y) + margin_top + margin_bottom
+
         # Calculate effective canvas size
-        canvas_width = width + margin_left + margin_right
-        canvas_height = height + margin_top + margin_bottom
+        # Canvas needs to fit: ruler + content (which already includes margins)
+        canvas_width = ruler_left + content_width
+        canvas_height = ruler_top + content_height
 
         svg_content = (
             f'<svg width="{canvas_width}" height="{canvas_height}" '
             f'xmlns="http://www.w3.org/2000/svg">\n'
+            f"  <style>\n"
+            f'    text {{ font-family: "Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif; }}\n'
+            f"  </style>\n"
         )
 
         # Add definitions for arrow markers
         svg_content += self._create_marker_defs()
 
-        # Add grid if requested
-        if show_grid:
-            svg_content += self._create_grid(canvas_width, canvas_height, margin_left, margin_top)
+        # The drawing area starts right after the ruler
+        # Ruler is at 0,0 and measures the full content (including margins)
+        drawing_start_x = ruler_left
+        drawing_start_y = ruler_top
 
-        # Create a group for the main content with margins
-        svg_content += f'  <g transform="translate({margin_left}, {margin_top})">\n'
+        # Add grid if requested (covers the full drawing area)
+        if show_grid:
+            svg_content += self._create_grid(
+                content_width, content_height, drawing_start_x, drawing_start_y
+            )
+
+        # Shapes are offset within the drawing area by the left/top margins
+        # and normalized by subtracting min_x, min_y so the leftmost/topmost shape
+        # starts at margin_left, margin_top
+        shape_offset_x = drawing_start_x + margin_left - min_x
+        shape_offset_y = drawing_start_y + margin_top - min_y
+        svg_content += f'  <g transform="translate({shape_offset_x}, {shape_offset_y})">\n'
 
         # Render shapes
         for shape in shapes:
@@ -45,9 +148,11 @@ class SVGBackend(Backend):
 
         svg_content += "  </g>\n"
 
-        # Add rulers if requested
+        # Add rulers if requested (always at top-left origin)
         if show_rulers:
-            svg_content += self._create_rulers(width, height, margin_left, margin_top)
+            svg_content += self._create_rulers(
+                content_width, content_height, margin_left, margin_top, ruler_left, ruler_top
+            )
 
         svg_content += "</svg>"
 
@@ -89,41 +194,74 @@ class SVGBackend(Backend):
 """
 
     def _create_grid(self, width: float, height: float, offset_x: float, offset_y: float) -> str:
-        """Create a grid pattern."""
-        grid_svg = '  <g id="grid" opacity="0.2">\n'
-        grid_size = 20
+        """Create a grid pattern with minor grid every 50px and major grid every 100px."""
+        grid_svg = '  <g id="grid">\n'
 
-        # Vertical lines
-        for x in range(0, int(width) + 1, grid_size):
-            grid_svg += f'    <line x1="{x + offset_x}" y1="{offset_y}" x2="{x + offset_x}" y2="{height + offset_y}" stroke="#cccccc" stroke-width="0.5"/>\n'
+        # Minor grid lines (every 50 pixels)
+        grid_svg += '    <g opacity="0.3">\n'
+        for x in range(0, int(width) + 1, 50):
+            if x % 100 != 0:
+                grid_svg += f'      <line x1="{x + offset_x}" y1="{offset_y}" x2="{x + offset_x}" y2="{height + offset_y}" stroke="#999999" stroke-width="0.5"/>\n'
 
-        # Horizontal lines
-        for y in range(0, int(height) + 1, grid_size):
-            grid_svg += f'    <line x1="{offset_x}" y1="{y + offset_y}" x2="{width + offset_x}" y2="{y + offset_y}" stroke="#cccccc" stroke-width="0.5"/>\n'
+        for y in range(0, int(height) + 1, 50):
+            if y % 100 != 0:
+                grid_svg += f'      <line x1="{offset_x}" y1="{y + offset_y}" x2="{width + offset_x}" y2="{y + offset_y}" stroke="#999999" stroke-width="0.5"/>\n'
+        grid_svg += "    </g>\n"
 
-        grid_svg += '  </g>\n'
+        # Major grid lines (every 100 pixels)
+        grid_svg += '    <g opacity="0.25">\n'
+        for x in range(0, int(width) + 1, 100):
+            grid_svg += f'      <line x1="{x + offset_x}" y1="{offset_y}" x2="{x + offset_x}" y2="{height + offset_y}" stroke="#666666" stroke-width="1"/>\n'
+
+        for y in range(0, int(height) + 1, 100):
+            grid_svg += f'      <line x1="{offset_x}" y1="{y + offset_y}" x2="{width + offset_x}" y2="{y + offset_y}" stroke="#666666" stroke-width="1"/>\n'
+        grid_svg += "    </g>\n"
+
+        grid_svg += "  </g>\n"
         return grid_svg
 
-    def _create_rulers(self, width: float, height: float, offset_x: float, offset_y: float) -> str:
-        """Create rulers along the edges."""
+    def _create_rulers(
+        self,
+        content_width: float,
+        content_height: float,
+        margin_left: float,
+        margin_top: float,
+        ruler_left: float,
+        ruler_top: float,
+    ) -> str:
+        """Create rulers along the edges, always starting at (0,0)."""
         ruler_svg = '  <g id="rulers">\n'
 
-        # Top ruler
-        ruler_svg += f'    <rect x="{offset_x}" y="0" width="{width}" height="{offset_y}" fill="#f0f0f0"/>\n'
+        # Drawing area starts right after the ruler
+        drawing_start_x = ruler_left
+        drawing_start_y = ruler_top
 
-        # Left ruler
-        ruler_svg += f'    <rect x="0" y="{offset_y}" width="{offset_x}" height="{height}" fill="#f0f0f0"/>\n'
+        # Top ruler background (spans the full width)
+        ruler_svg += f'    <rect x="0" y="0" width="{ruler_left + content_width}" height="{ruler_top}" fill="#e0e0e0"/>\n'
 
-        # Add tick marks (every 50 pixels)
-        for i in range(0, int(width) + 1, 50):
-            ruler_svg += f'    <line x1="{i + offset_x}" y1="{offset_y - 5}" x2="{i + offset_x}" y2="{offset_y}" stroke="#000" stroke-width="1"/>\n'
-            ruler_svg += f'    <text x="{i + offset_x}" y="{offset_y - 8}" font-size="10" text-anchor="middle">{i}</text>\n'
+        # Left ruler background (spans the full height)
+        ruler_svg += f'    <rect x="0" y="{ruler_top}" width="{ruler_left}" height="{content_height}" fill="#e0e0e0"/>\n'
 
-        for i in range(0, int(height) + 1, 50):
-            ruler_svg += f'    <line x1="{offset_x - 5}" y1="{i + offset_y}" x2="{offset_x}" y2="{i + offset_y}" stroke="#000" stroke-width="1"/>\n'
-            ruler_svg += f'    <text x="{offset_x - 8}" y="{i + offset_y + 4}" font-size="10" text-anchor="end">{i}</text>\n'
+        # Add tick marks (every 50 pixels) measuring the full content width
+        for i in range(0, int(content_width) + 1, 50):
+            ruler_svg += f'    <line x1="{i + drawing_start_x}" y1="{ruler_top - 5}" x2="{i + drawing_start_x}" y2="{ruler_top}" stroke="#000" stroke-width="1"/>\n'
+            # Skip text for the last tick mark
+            if i < int(content_width):
+                ruler_svg += f'    <text x="{i + drawing_start_x}" y="{ruler_top - 8}" font-size="10" text-anchor="middle">{i}</text>\n'
 
-        ruler_svg += '  </g>\n'
+        # Add tick marks (every 50 pixels) measuring the full content height
+        for i in range(0, int(content_height) + 1, 50):
+            ruler_svg += f'    <line x1="{ruler_left - 5}" y1="{i + drawing_start_y}" x2="{ruler_left}" y2="{i + drawing_start_y}" stroke="#000" stroke-width="1"/>\n'
+            # Skip text for the last tick mark
+            if i < int(content_height):
+                ruler_svg += f'    <text x="{ruler_left - 8}" y="{i + drawing_start_y + 4}" font-size="10" text-anchor="end">{i}</text>\n'
+
+        # Add dimensions text in bottom right corner
+        dim_x = drawing_start_x + content_width - 5
+        dim_y = drawing_start_y + content_height - 5
+        ruler_svg += f'    <text x="{dim_x}" y="{dim_y}" font-size="11" text-anchor="end" fill="#666">{int(content_width)}×{int(content_height)}</text>\n'
+
+        ruler_svg += "  </g>\n"
         return ruler_svg
 
     def _shape_to_svg(self, shape) -> str:
@@ -173,7 +311,9 @@ class SVGBackend(Backend):
         """Convert rectangle to SVG."""
         fill = self._color_to_svg(rect.background_color) if rect.background_color else "none"
         transform = self._get_transform(rect)
-        fill_opacity = self._get_fill_opacity(rect.background_color) if rect.background_color else ""
+        fill_opacity = (
+            self._get_fill_opacity(rect.background_color) if rect.background_color else ""
+        )
 
         # For simplicity, use the first border values if they're all the same
         # Otherwise, we'd need to draw 4 separate lines for each side
@@ -191,7 +331,7 @@ class SVGBackend(Backend):
         return (
             f'    <rect x="{rect.x}" y="{rect.y}" width="{rect.width}" height="{rect.height}" '
             f'fill="{fill}"{fill_opacity} stroke="{stroke}" stroke-width="{stroke_width}"'
-            f'{stroke_opacity}{stroke_dasharray}{transform}/>\n'
+            f"{stroke_opacity}{stroke_dasharray}{transform}/>\n"
         )
 
     def _circle_to_svg(self, circle: Circle) -> str:
@@ -201,13 +341,15 @@ class SVGBackend(Backend):
         stroke_width = circle.border_thickness[0]
         cx = circle.x + circle.radius
         cy = circle.y + circle.radius
-        fill_opacity = self._get_fill_opacity(circle.background_color) if circle.background_color else ""
+        fill_opacity = (
+            self._get_fill_opacity(circle.background_color) if circle.background_color else ""
+        )
         stroke_opacity = self._get_stroke_opacity(circle.border_color[0])
 
         return (
             f'    <circle cx="{cx}" cy="{cy}" r="{circle.radius}" '
             f'fill="{fill}"{fill_opacity} stroke="{stroke}" stroke-width="{stroke_width}"'
-            f'{stroke_opacity}/>\n'
+            f"{stroke_opacity}/>\n"
         )
 
     def _triangle_to_svg(self, triangle: Triangle) -> str:
@@ -215,17 +357,21 @@ class SVGBackend(Backend):
         points = triangle.get_points()
         points_str = " ".join(f"{x},{y}" for x, y in points)
 
-        fill = self._color_to_svg(triangle.background_color) if triangle.background_color else "none"
+        fill = (
+            self._color_to_svg(triangle.background_color) if triangle.background_color else "none"
+        )
         stroke = self._color_to_svg(triangle.border_color[0])
         stroke_width = triangle.border_thickness[0]
         transform = self._get_transform(triangle)
-        fill_opacity = self._get_fill_opacity(triangle.background_color) if triangle.background_color else ""
+        fill_opacity = (
+            self._get_fill_opacity(triangle.background_color) if triangle.background_color else ""
+        )
         stroke_opacity = self._get_stroke_opacity(triangle.border_color[0])
 
         return (
             f'    <polygon points="{points_str}" '
             f'fill="{fill}"{fill_opacity} stroke="{stroke}" stroke-width="{stroke_width}"'
-            f'{stroke_opacity}{transform}/>\n'
+            f"{stroke_opacity}{transform}/>\n"
         )
 
     def _polygon_to_svg(self, polygon: Polygon) -> str:
@@ -236,13 +382,15 @@ class SVGBackend(Backend):
         stroke = self._color_to_svg(polygon.border_color[0])
         stroke_width = polygon.border_thickness[0]
         transform = self._get_transform(polygon)
-        fill_opacity = self._get_fill_opacity(polygon.background_color) if polygon.background_color else ""
+        fill_opacity = (
+            self._get_fill_opacity(polygon.background_color) if polygon.background_color else ""
+        )
         stroke_opacity = self._get_stroke_opacity(polygon.border_color[0])
 
         return (
             f'    <polygon points="{points_str}" '
             f'fill="{fill}"{fill_opacity} stroke="{stroke}" stroke-width="{stroke_width}"'
-            f'{stroke_opacity}{transform}/>\n'
+            f"{stroke_opacity}{transform}/>\n"
         )
 
     def _line_to_svg(self, line: Line) -> str:
@@ -282,5 +430,5 @@ class SVGBackend(Backend):
         return (
             f'    <line x1="{line.x0}" y1="{line.y0}" x2="{line.x1}" y2="{line.y1}" '
             f'stroke="{stroke}" stroke-width="{line.thickness}"'
-            f'{stroke_opacity}{stroke_dasharray}{marker_start}{marker_end}/>\n'
+            f"{stroke_opacity}{stroke_dasharray}{marker_start}{marker_end}/>\n"
         )

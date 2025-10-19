@@ -110,6 +110,12 @@ class Object(XMLBase):
         self.strokeColor: Optional[str] = kwargs.get("strokeColor", None)
         self.strokeWidth: Optional[int] = kwargs.get("strokeWidth", None)
 
+        # Additional custom style attributes for polygons and rotation
+        self.polyCoords: Optional[str] = kwargs.get("polyCoords", None)
+        self.rotation: Optional[int] = kwargs.get("rotation", None)
+        self.dashed: Optional[int] = kwargs.get("dashed", None)
+        self.dashPattern: Optional[str] = kwargs.get("dashPattern", None)
+
         # Add to page if provided
         if page is not None:
             page.add_object(self)
@@ -184,6 +190,16 @@ class Object(XMLBase):
             style_dict["strokeColor"] = self.strokeColor
         if self.strokeWidth is not None:
             style_dict["strokeWidth"] = self.strokeWidth
+
+        # Custom attributes for polygons, rotation, and line styles
+        if self.polyCoords is not None:
+            style_dict["polyCoords"] = self.polyCoords
+        if self.rotation is not None:
+            style_dict["rotation"] = self.rotation
+        if self.dashed is not None:
+            style_dict["dashed"] = self.dashed
+        if self.dashPattern is not None:
+            style_dict["dashPattern"] = self.dashPattern
 
         return style_str_from_dict(style_dict)
 

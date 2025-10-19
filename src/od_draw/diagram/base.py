@@ -17,6 +17,13 @@ class Diagram:
         self.units = units
         self.shapes: List[Shape] = []
         self._backend: Optional[Backend] = None
+        self._explicit_dimensions = False
+
+    def set_dimensions(self, width: int, height: int):
+        """Explicitly set diagram dimensions."""
+        self.width = width
+        self.height = height
+        self._explicit_dimensions = True
 
     def add_shape(self, shape: Shape):
         self.shapes.append(shape)
@@ -34,7 +41,12 @@ class Diagram:
         elif self._backend is None:
             self._backend = SVGBackend()
 
-        render_kwargs = {"width": self.width, "height": self.height, **kwargs}
+        render_kwargs = {
+            "width": self.width,
+            "height": self.height,
+            "explicit_dimensions": self._explicit_dimensions,
+            **kwargs,
+        }
 
         self._backend.render(self.shapes, output_path, **render_kwargs)
 

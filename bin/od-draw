@@ -1,0 +1,9 @@
+#!/usr/bin/env python-main
+"""
+od-draw command line interface.
+"""
+
+from od_draw.cli import cli
+
+if __name__ == "__main__":
+    cli()

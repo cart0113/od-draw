@@ -23,7 +23,3 @@ class MyDiagram(diagram.Diagram):
             x0=500, y0=300, width=150, height=80, fill="#ffe66d", stroke="#000000", stroke_width=2
         )
         self.add_shape(rect2)
-
-
-if __name__ == "__main__":
-    cli()
