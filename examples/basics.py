@@ -3,7 +3,7 @@ Basic examples demonstrating od_draw shapes and features.
 """
 
 from od_draw.diagram.base import Diagram
-from od_draw.shapes.base import Triangle, Square, Rectangle, Polygon, Line
+from od_draw.shapes import Triangle, Square, Rectangle, Polygon, Line
 from od_draw import colors
 
 
@@ -25,19 +25,14 @@ class Polygons(Diagram):
             background_color=(colors.BLUE_SKY, 0.3),
         )
 
-        # Square - with rotation and different border colors per side
+        # Square - with rotation
         Square(
             diagram=self,
             x=200,
             y=50,
             size=100,
-            border_thickness=(20, 4, 2, 4, 5),  # top, right, bottom, left
-            border_color=(
-                colors.RED,
-                colors.GREEN,
-                colors.BLUE,
-                colors.YELLOW,
-            ),
+            border_thickness=3,
+            border_color=colors.RED,
             background_color=colors.PINK_HOT,
             rotation=15,
         )

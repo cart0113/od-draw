@@ -3,13 +3,14 @@ SVG backend for od-draw.
 """
 
 import math
-from typing import List, Optional
+from typing import List, Optional, Any
 from .base import Backend
-from ...shapes.base import Shape, Rectangle, Circle, Triangle, Polygon, Line, Square
+from ...shapes.base import Line, Circle
+from ...shapes.polygon import Polygon, Triangle, Rectangle, Square
 
 
 class SVGBackend(Backend):
-    def _calculate_bounding_box(self, shapes: List[Shape]) -> tuple:
+    def _calculate_bounding_box(self, shapes: List[Any]) -> tuple:
         """Calculate the bounding box of all shapes, accounting for rotation."""
         if not shapes:
             return 0, 0, 800, 600
@@ -76,7 +77,7 @@ class SVGBackend(Backend):
 
         return min_x, min_y, max_x, max_y
 
-    def render(self, shapes: List[Shape], output_path: str, **kwargs):
+    def render(self, shapes: List[Any], output_path: str, **kwargs):
         explicit_dimensions = kwargs.get("explicit_dimensions", False)
         width_provided = kwargs.get("width_provided", False)
         height_provided = kwargs.get("height_provided", False)
@@ -171,7 +172,7 @@ class SVGBackend(Backend):
         with open(output_path, "w") as f:
             f.write(svg_content)
 
-    def show(self, shapes: List[Shape], **kwargs):
+    def show(self, shapes: List[Any], **kwargs):
         import tempfile
         import subprocess
         from ...config import get_config
@@ -290,7 +291,7 @@ class SVGBackend(Backend):
             return self._rectangle_to_svg(shape)
         return ""
 
-    def _get_transform(self, shape: Shape) -> str:
+    def _get_transform(self, shape: Any) -> str:
         """Get transform attribute for rotation."""
         if shape.rotation != 0:
             cx = shape.x + shape.width / 2
@@ -319,90 +320,63 @@ class SVGBackend(Backend):
             return f' stroke-opacity="{color.alpha}"'
         return ""
 
-    def _rectangle_to_svg(self, rect: Shape) -> str:
-        """Convert rectangle to SVG."""
-        fill = self._color_to_svg(rect.background_color) if rect.background_color else "none"
-        transform = self._get_transform(rect)
-        fill_opacity = (
-            self._get_fill_opacity(rect.background_color) if rect.background_color else ""
-        )
-
-        # For simplicity, use the first border values if they're all the same
-        # Otherwise, we'd need to draw 4 separate lines for each side
-        stroke = self._color_to_svg(rect.border_color[0])
-        stroke_width = rect.border_thickness[0]
-        stroke_opacity = self._get_stroke_opacity(rect.border_color[0])
-
-        # Handle stroke style
-        stroke_dasharray = ""
-        if rect.border_style[0] == "dashed":
-            stroke_dasharray = ' stroke-dasharray="5,5"'
-        elif rect.border_style[0] == "dotted":
-            stroke_dasharray = ' stroke-dasharray="1,3"'
-
-        return (
-            f'    <rect x="{rect.x}" y="{rect.y}" width="{rect.width}" height="{rect.height}" '
-            f'fill="{fill}"{fill_opacity} stroke="{stroke}" stroke-width="{stroke_width}"'
-            f"{stroke_opacity}{stroke_dasharray}{transform}/>\n"
-        )
+    def _rectangle_to_svg(self, rect) -> str:
+        """Convert rectangle to SVG - now renders as polygon."""
+        return self._polygon_to_svg(rect)
 
     def _circle_to_svg(self, circle: Circle) -> str:
         """Convert circle to SVG."""
         fill = self._color_to_svg(circle.background_color) if circle.background_color else "none"
-        stroke = self._color_to_svg(circle.border_color[0])
-        stroke_width = circle.border_thickness[0]
+        stroke = self._color_to_svg(circle.border_color)
+        stroke_width = circle.border_thickness
         cx = circle.x + circle.radius
         cy = circle.y + circle.radius
         fill_opacity = (
             self._get_fill_opacity(circle.background_color) if circle.background_color else ""
         )
-        stroke_opacity = self._get_stroke_opacity(circle.border_color[0])
+        stroke_opacity = self._get_stroke_opacity(circle.border_color)
+
+        # Handle stroke style
+        stroke_dasharray = ""
+        if circle.border_style == "dashed":
+            stroke_dasharray = ' stroke-dasharray="5,5"'
+        elif circle.border_style == "dotted":
+            stroke_dasharray = ' stroke-dasharray="1,3"'
 
         return (
             f'    <circle cx="{cx}" cy="{cy}" r="{circle.radius}" '
             f'fill="{fill}"{fill_opacity} stroke="{stroke}" stroke-width="{stroke_width}"'
-            f"{stroke_opacity}/>\n"
+            f"{stroke_opacity}{stroke_dasharray}/>\n"
         )
 
     def _triangle_to_svg(self, triangle: Triangle) -> str:
-        """Convert triangle to SVG."""
-        points = triangle.get_points()
-        points_str = " ".join(f"{x},{y}" for x, y in points)
-
-        fill = (
-            self._color_to_svg(triangle.background_color) if triangle.background_color else "none"
-        )
-        stroke = self._color_to_svg(triangle.border_color[0])
-        stroke_width = triangle.border_thickness[0]
-        transform = self._get_transform(triangle)
-        fill_opacity = (
-            self._get_fill_opacity(triangle.background_color) if triangle.background_color else ""
-        )
-        stroke_opacity = self._get_stroke_opacity(triangle.border_color[0])
-
-        return (
-            f'    <polygon points="{points_str}" '
-            f'fill="{fill}"{fill_opacity} stroke="{stroke}" stroke-width="{stroke_width}"'
-            f"{stroke_opacity}{transform}/>\n"
-        )
+        """Convert triangle to SVG - now renders as polygon."""
+        return self._polygon_to_svg(triangle)
 
     def _polygon_to_svg(self, polygon: Polygon) -> str:
         """Convert polygon to SVG."""
         points_str = " ".join(f"{x},{y}" for x, y in polygon.points)
 
         fill = self._color_to_svg(polygon.background_color) if polygon.background_color else "none"
-        stroke = self._color_to_svg(polygon.border_color[0])
-        stroke_width = polygon.border_thickness[0]
+        stroke = self._color_to_svg(polygon.border_color)
+        stroke_width = polygon.border_thickness
         transform = self._get_transform(polygon)
         fill_opacity = (
             self._get_fill_opacity(polygon.background_color) if polygon.background_color else ""
         )
-        stroke_opacity = self._get_stroke_opacity(polygon.border_color[0])
+        stroke_opacity = self._get_stroke_opacity(polygon.border_color)
+
+        # Handle stroke style
+        stroke_dasharray = ""
+        if polygon.border_style == "dashed":
+            stroke_dasharray = ' stroke-dasharray="5,5"'
+        elif polygon.border_style == "dotted":
+            stroke_dasharray = ' stroke-dasharray="1,3"'
 
         return (
             f'    <polygon points="{points_str}" '
             f'fill="{fill}"{fill_opacity} stroke="{stroke}" stroke-width="{stroke_width}"'
-            f"{stroke_opacity}{transform}/>\n"
+            f"{stroke_opacity}{stroke_dasharray}{transform}/>\n"
         )
 
     def _line_to_svg(self, line: Line) -> str:

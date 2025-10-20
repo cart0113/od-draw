@@ -3,13 +3,14 @@ PNG backend for od-draw.
 """
 
 import math
-from typing import List, Tuple
+from typing import List, Tuple, Any
 from .base import Backend
-from ...shapes.base import Shape, Rectangle, Circle, Triangle, Polygon, Line, Square
+from ...shapes.base import Line, Circle
+from ...shapes.polygon import Polygon, Triangle, Rectangle, Square
 
 
 class PNGBackend(Backend):
-    def render(self, shapes: List[Shape], output_path: str, **kwargs):
+    def render(self, shapes: List[Any], output_path: str, **kwargs):
         from PIL import Image, ImageDraw
 
         width = kwargs.get("width", 800)
@@ -44,7 +45,7 @@ class PNGBackend(Backend):
 
         img.save(output_path)
 
-    def show(self, shapes: List[Shape], **kwargs):
+    def show(self, shapes: List[Any], **kwargs):
         from PIL import Image, ImageDraw
         import tempfile
         import subprocess
@@ -129,7 +130,7 @@ class PNGBackend(Backend):
         elif isinstance(shape, (Rectangle, Square)):
             self._draw_rectangle(draw, shape, offset_x, offset_y)
 
-    def _draw_rectangle(self, draw, rect: Shape, offset_x: int, offset_y: int):
+    def _draw_rectangle(self, draw, rect: Any, offset_x: int, offset_y: int):
         """Draw a rectangle with optional rotation."""
         from PIL import Image, ImageDraw
 
@@ -139,8 +140,8 @@ class PNGBackend(Backend):
         y2 = y1 + rect.height
 
         fill = self._color_to_rgba(rect.background_color) if rect.background_color else None
-        outline = self._color_to_rgba(rect.border_color[0])
-        width = int(rect.border_thickness[0])
+        outline = self._color_to_rgba(rect.border_color)
+        width = int(rect.border_thickness)
 
         if rect.rotation != 0:
             # For rotated rectangles, we need to create a temporary image and rotate it
@@ -168,19 +169,18 @@ class PNGBackend(Backend):
         y2 = y1 + circle.radius * 2
 
         fill = self._color_to_rgba(circle.background_color) if circle.background_color else None
-        outline = self._color_to_rgba(circle.border_color[0])
-        width = int(circle.border_thickness[0])
+        outline = self._color_to_rgba(circle.border_color)
+        width = int(circle.border_thickness)
 
         draw.ellipse([x1, y1, x2, y2], fill=fill, outline=outline, width=width)
 
     def _draw_triangle(self, draw, triangle: Triangle, offset_x: int, offset_y: int):
         """Draw a triangle."""
-        points = triangle.get_points()
-        points = [(x + offset_x, y + offset_y) for x, y in points]
+        points = [(x + offset_x, y + offset_y) for x, y in triangle.points]
 
         fill = self._color_to_rgba(triangle.background_color) if triangle.background_color else None
-        outline = self._color_to_rgba(triangle.border_color[0])
-        width = int(triangle.border_thickness[0])
+        outline = self._color_to_rgba(triangle.border_color)
+        width = int(triangle.border_thickness)
 
         if triangle.rotation != 0:
             # Apply rotation to points
@@ -206,8 +206,8 @@ class PNGBackend(Backend):
         points = [(x + offset_x, y + offset_y) for x, y in polygon.points]
 
         fill = self._color_to_rgba(polygon.background_color) if polygon.background_color else None
-        outline = self._color_to_rgba(polygon.border_color[0])
-        width = int(polygon.border_thickness[0])
+        outline = self._color_to_rgba(polygon.border_color)
+        width = int(polygon.border_thickness)
 
         if polygon.rotation != 0:
             # Apply rotation to points

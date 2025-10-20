@@ -2,8 +2,7 @@
 Base diagram class for od-draw.
 """
 
-from typing import List, Optional
-from ..shapes.base import Shape
+from typing import List, Optional, Any
 from .backends.base import Backend
 from .backends.svg import SVGBackend
 from .backends.png import PNGBackend
@@ -20,7 +19,7 @@ class Diagram:
         self.width = width if self._width_provided else 800
         self.height = height if self._height_provided else 600
         self.units = units
-        self.shapes: List[Shape] = []
+        self.shapes: List[Any] = []
         self._backend: Optional[Backend] = None
 
         # Use explicit dimensions if BOTH width and height are provided
@@ -32,7 +31,7 @@ class Diagram:
         self.height = height
         self._explicit_dimensions = True
 
-    def add_shape(self, shape: Shape):
+    def add_shape(self, shape: Any):
         self.shapes.append(shape)
 
     def set_backend(self, backend: Backend):

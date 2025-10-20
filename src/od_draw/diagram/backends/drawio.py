@@ -8,10 +8,11 @@ Draw.io compatible XML files.
 import os
 import tempfile
 import subprocess
-from typing import List
+from typing import List, Any
 
 from .base import Backend
-from ...shapes.base import Shape, Rectangle, Circle, Triangle, Polygon, Line, Square
+from ...shapes.base import Line, Circle
+from ...shapes.polygon import Polygon, Triangle, Rectangle, Square
 from ...drawio.file import File
 from ...drawio.page import Page
 from ...drawio.object import Object
@@ -24,7 +25,7 @@ class DrawIOBackend(Backend):
     Converts od-draw shapes to Draw.io XML using the internal drawio package.
     """
 
-    def render(self, shapes: List[Shape], output_path: str, **kwargs) -> None:
+    def render(self, shapes: List[Any], output_path: str, **kwargs) -> None:
         """
         Render shapes to a Draw.io file.
 
@@ -48,7 +49,7 @@ class DrawIOBackend(Backend):
         # Write to disk
         file.write()
 
-    def show(self, shapes: List[Shape], **kwargs) -> None:
+    def show(self, shapes: List[Any], **kwargs) -> None:
         """
         Display shapes in the configured Draw.io viewer.
 
@@ -92,7 +93,7 @@ class DrawIOBackend(Backend):
             normalized.append([nx, ny])
         return str(normalized)
 
-    def _add_shape_to_page(self, page: Page, shape: Shape) -> None:
+    def _add_shape_to_page(self, page: Page, shape: Any) -> None:
         """
         Convert an od-draw shape to a Draw.io object and add to page.
 
