@@ -64,6 +64,14 @@ This file provides guidance to AI assistants when working with code in this repo
      * It can create circular import issues and increase startup time
    - Keep __init__.py minimal and explicit about what is exposed in the module's public API
    - Only import specific symbols into __init__.py if the user explicitly asks for it
+   - **IMPORTANT**: All __init__.py files should be empty - use full import paths instead
+   - Example of correct import style:
+     ```python
+     from od_draw.diagram.base import Diagram
+     from od_draw.shapes.base import Rectangle, Circle, Triangle
+     from od_draw import colors
+     ```
+   - Do NOT use convenience imports like `from od_draw import Diagram` or `import od_draw.shapes`
 
 7. No unsolicited explanations:
    - Don't explain code unless asked

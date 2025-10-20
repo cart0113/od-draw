@@ -12,7 +12,9 @@ from typing import List
 
 from .base import Backend
 from ...shapes.base import Shape, Rectangle, Circle, Triangle, Polygon, Line, Square
-from ...drawio import File, Page, Object
+from ...drawio.file import File
+from ...drawio.page import Page
+from ...drawio.object import Object
 
 
 class DrawIOBackend(Backend):

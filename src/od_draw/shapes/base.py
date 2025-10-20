@@ -38,6 +38,7 @@ class Shape:
         border_color: Optional[SideColor] = None,
         background_color: Optional[ColorInput] = None,
         rotation: float = 0,
+        diagram = None,
     ):
         self.x = x
         self.y = y
@@ -72,6 +73,10 @@ class Shape:
         else:
             self.background_color = parse_color(background_color)
 
+        # Auto-register with diagram if provided
+        if diagram is not None:
+            diagram.add_shape(self)
+
     @property
     def position(self):
         return Point(self.x, self.y)
@@ -95,10 +100,11 @@ class Rectangle(Shape):
         border_color: Optional[SideColor] = None,
         background_color: Optional[ColorInput] = None,
         rotation: float = 0,
+        diagram = None,
     ):
         super().__init__(
             x, y, width, height,
-            border_thickness, border_style, border_color, background_color, rotation
+            border_thickness, border_style, border_color, background_color, rotation, diagram
         )
 
 
@@ -115,10 +121,11 @@ class Square(Shape):
         border_color: Optional[SideColor] = None,
         background_color: Optional[ColorInput] = None,
         rotation: float = 0,
+        diagram = None,
     ):
         super().__init__(
             x, y, size, size,
-            border_thickness, border_style, border_color, background_color, rotation
+            border_thickness, border_style, border_color, background_color, rotation, diagram
         )
 
 
@@ -136,10 +143,11 @@ class Triangle(Shape):
         border_color: Optional[SideColor] = None,
         background_color: Optional[ColorInput] = None,
         rotation: float = 0,
+        diagram = None,
     ):
         super().__init__(
             x, y, width, height,
-            border_thickness, border_style, border_color, background_color, rotation
+            border_thickness, border_style, border_color, background_color, rotation, diagram
         )
 
     def get_points(self) -> List[Tuple[float, float]]:
@@ -162,6 +170,7 @@ class Polygon(Shape):
         border_color: Optional[SideColor] = None,
         background_color: Optional[ColorInput] = None,
         rotation: float = 0,
+        diagram = None,
     ):
         # Calculate bounding box
         if not points:
@@ -176,7 +185,7 @@ class Polygon(Shape):
 
         super().__init__(
             x, y, width, height,
-            border_thickness, border_style, border_color, background_color, rotation
+            border_thickness, border_style, border_color, background_color, rotation, diagram
         )
         self.points = points
 
@@ -195,6 +204,7 @@ class Line:
         style: str = "solid",
         left_end_style: str = "none",
         right_end_style: str = "none",
+        diagram = None,
     ):
         self.x0 = x0
         self.y0 = y0
@@ -205,6 +215,10 @@ class Line:
         self.style = style
         self.left_end_style = left_end_style  # none, square, circle, arrow-in, arrow-out
         self.right_end_style = right_end_style
+
+        # Auto-register with diagram if provided
+        if diagram is not None:
+            diagram.add_shape(self)
 
 
 class Circle(Shape):
@@ -218,11 +232,12 @@ class Circle(Shape):
         border_thickness: float = 1,
         border_color: Optional[ColorInput] = None,
         background_color: Optional[ColorInput] = None,
+        diagram = None,
     ):
         # For circles, we don't support per-side borders
         super().__init__(
             x, y, radius * 2, radius * 2,
-            border_thickness, "solid", border_color, background_color, 0
+            border_thickness, "solid", border_color, background_color, 0, diagram
         )
         self.radius = radius
 
