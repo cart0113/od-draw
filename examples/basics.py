@@ -11,7 +11,7 @@ class Polygons(Diagram):
     """Diagram showcasing polygon shapes."""
 
     def __init__(self, **kwargs):
-        super().__init__(width=800, height=600, **kwargs)
+        super().__init__(**kwargs)
 
         # Triangle - basic with solid border
         Triangle(
@@ -31,7 +31,7 @@ class Polygons(Diagram):
             x=200,
             y=50,
             size=100,
-            border_thickness=(2, 4, 2, 4),  # top, right, bottom, left
+            border_thickness=(20, 4, 2, 4, 5),  # top, right, bottom, left
             border_color=(
                 colors.RED,
                 colors.GREEN,
@@ -135,7 +135,7 @@ class Lines(Diagram):
     """Diagram showcasing line features."""
 
     def __init__(self, **kwargs):
-        super().__init__(width=800, height=600, **kwargs)
+        super().__init__(**kwargs)
 
         # Simple line
         Line(

@@ -78,6 +78,8 @@ class SVGBackend(Backend):
 
     def render(self, shapes: List[Shape], output_path: str, **kwargs):
         explicit_dimensions = kwargs.get("explicit_dimensions", False)
+        width_provided = kwargs.get("width_provided", False)
+        height_provided = kwargs.get("height_provided", False)
 
         show_rulers = kwargs.get("show_rulers", False)
         show_grid = kwargs.get("show_grid", False)
@@ -93,7 +95,7 @@ class SVGBackend(Backend):
         ruler_top = ruler_size
 
         if explicit_dimensions:
-            # Use explicitly set dimensions (already includes any desired margins)
+            # Both width and height explicitly set - use them and clip content
             content_width = kwargs.get("width", 800)
             content_height = kwargs.get("height", 600)
             min_x = 0
@@ -103,10 +105,20 @@ class SVGBackend(Backend):
         else:
             # Auto-calculate from bounding box
             min_x, min_y, max_x, max_y = self._calculate_bounding_box(shapes)
-            # The content area is the shape bounds PLUS margins on all sides
-            # Margins are PART OF the drawing
-            content_width = (max_x - min_x) + margin_left + margin_right
-            content_height = (max_y - min_y) + margin_top + margin_bottom
+
+            # Calculate content dimensions based on what was provided
+            if width_provided and not height_provided:
+                # Width is fixed, height is auto-sized
+                content_width = kwargs.get("width", 800)
+                content_height = (max_y - min_y) + margin_top + margin_bottom
+            elif height_provided and not width_provided:
+                # Height is fixed, width is auto-sized
+                content_width = (max_x - min_x) + margin_left + margin_right
+                content_height = kwargs.get("height", 600)
+            else:
+                # Neither provided - auto-size both
+                content_width = (max_x - min_x) + margin_left + margin_right
+                content_height = (max_y - min_y) + margin_top + margin_bottom
 
         # Calculate effective canvas size
         # Canvas needs to fit: ruler + content (which already includes margins)
