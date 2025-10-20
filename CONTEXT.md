@@ -148,6 +148,8 @@ This file provides guidance to AI assistants when working with code in this repo
 
 ## Refactoring
 
+**CRITICAL**: When refactoring, ALWAYS remove all unnecessary code. Do not leave old implementations, unused functions, or dead code behind. Clean refactoring means complete removal of obsolete code.
+
 1. Distinguish between API implementation vs API usage refactoring:
    - When refactoring the API itself (core logic), understanding multiple files together may be necessary
    - When updating API calls across many files, take it one file at a time
@@ -157,7 +159,15 @@ This file provides guidance to AI assistants when working with code in this repo
    - Then update caller files one at a time, finishing each file before moving to the next
    - Don't attempt to make partial changes across multiple files simultaneously
 
-3. Efficient multi-file refactoring strategy:
+3. Remove all unnecessary code:
+   - **EXTREMELY IMPORTANT**: Delete old implementations completely when replacing them
+   - Remove unused imports after refactoring
+   - Delete obsolete helper functions that are no longer called
+   - Remove commented-out code blocks
+   - Clean up temporary debugging code
+   - Example: When converting PNG backend from PIL to SVG conversion, delete ALL the old PIL drawing code
+
+4. Efficient multi-file refactoring strategy:
    - Check for patterns in API usage before starting
    - Create a clear plan with files prioritized
    - Focus on one type of change at a time
