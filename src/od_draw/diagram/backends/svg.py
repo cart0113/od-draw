@@ -3,14 +3,16 @@ SVG backend for od-draw.
 """
 
 import math
-from typing import List, Optional, Any
+from typing import List, Optional
 from .base import Backend
-from ...shapes.base import Line, Circle
+from ...shapes.base import Shape
+from ...shapes.line import Line
+from ...shapes.circle import Circle
 from ...shapes.polygon import Polygon, Triangle, Rectangle, Square
 
 
 class SVGBackend(Backend):
-    def _calculate_bounding_box(self, shapes: List[Any]) -> tuple:
+    def _calculate_bounding_box(self, shapes: List[Shape]) -> tuple:
         """Calculate the bounding box of all shapes, accounting for rotation."""
         if not shapes:
             return 0, 0, 800, 600
@@ -77,7 +79,7 @@ class SVGBackend(Backend):
 
         return min_x, min_y, max_x, max_y
 
-    def render(self, shapes: List[Any], output_path: str, **kwargs):
+    def render(self, shapes: List[Shape], output_path: str, **kwargs):
         explicit_dimensions = kwargs.get("explicit_dimensions", False)
         width_provided = kwargs.get("width_provided", False)
         height_provided = kwargs.get("height_provided", False)
@@ -172,7 +174,7 @@ class SVGBackend(Backend):
         with open(output_path, "w") as f:
             f.write(svg_content)
 
-    def show(self, shapes: List[Any], **kwargs):
+    def show(self, shapes: List[Shape], **kwargs):
         import tempfile
         import subprocess
         from ...config import get_config
@@ -291,7 +293,7 @@ class SVGBackend(Backend):
             return self._rectangle_to_svg(shape)
         return ""
 
-    def _get_transform(self, shape: Any) -> str:
+    def _get_transform(self, shape: Shape) -> str:
         """Get transform attribute for rotation."""
         if shape.rotation != 0:
             cx = shape.x + shape.width / 2

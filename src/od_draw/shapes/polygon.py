@@ -3,10 +3,11 @@ Polygon shapes for od-draw.
 """
 
 from typing import List, Tuple, Optional
+from .base import Shape
 from ..colors import Color, ColorInput, parse_color
 
 
-class Polygon:
+class Polygon(Shape):
     """Base polygon shape defined by points."""
 
     def __init__(
@@ -19,6 +20,8 @@ class Polygon:
         rotation: float = 0,
         diagram=None,
     ):
+        super().__init__(diagram)
+
         if not points:
             raise ValueError("Polygon must have at least 3 points")
         if len(points) < 3:
@@ -42,10 +45,6 @@ class Polygon:
 
         # Background color
         self.background_color = parse_color(background_color) if background_color else None
-
-        # Auto-register with diagram if provided
-        if diagram is not None:
-            diagram.add_shape(self)
 
 
 class Triangle(Polygon):
